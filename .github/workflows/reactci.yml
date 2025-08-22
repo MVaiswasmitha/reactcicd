@@ -1,10 +1,13 @@
-name: React CI
+name: React CI/CD
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: write   # required for gh-pages deployment
 
 jobs:
   build-and-test:
@@ -25,11 +28,36 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
-        # If no package-lock.json exists, replace with: npm install
+        run: npm ci || npm install
 
       - name: Run tests
         run: npm test --if-present
 
       - name: Build project
         run: npm run build --if-present
+
+  deploy:
+    needs: build-and-test   # only runs if build-and-test passes
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        run: npm run deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
